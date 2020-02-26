@@ -1,5 +1,27 @@
 import express, { Request, Response } from "express";
 import Memes, { IMemes } from "../models/memes";
+import multer, { diskStorage } from "multer";
+import uuidv1 from "uuid/v1";
+
+const storage = diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, "images");
+    },
+    filename: (_req, _file, cb) => {
+        cb(null, uuidv1() + ".jpg");
+    }
+});
+
+const upload = multer({
+    storage,
+    fileFilter: (_req, file, cb) => {
+        if (file.mimetype === "image/png" || file.mimetype === "image/jpeg") {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
+    }
+});
 
 const router = express.Router();
 
@@ -29,8 +51,15 @@ router.get("/:id", getMeme, async (_req, res: ResponseWithMeme) => {
     return res.send(res.meme);
 });
 
-router.post("/", async (req, res) => {
-    const newMeme = new Memes(req.body);
+router.post("/", upload.single("image"), async (req, res) => {
+    const newMeme = new Memes({
+        name: req.body.name,
+        creater: req.body.creater,
+        img: {
+            fileName: req.file.filename,
+            description: req.body.description
+        }
+    });
     newMeme.save((err) => {
         if (err) {
             return res.status(400).send({ message: err });
@@ -39,13 +68,19 @@ router.post("/", async (req, res) => {
     });
 });
 
-router.patch("/:id", getMeme, async (req, res: ResponseWithMeme) => {
-    if (req.body.name) {
+router.patch("/:id", getMeme, upload.single("image"), async (req, res: ResponseWithMeme) => {
+    if (req.body.name)
         res.meme!.name = req.body.name;
-    }
-    if (req.body.creater) {
+
+    if (req.body.creater)
         res.meme!.creater = req.body.creater;
-    }
+
+    if (req.body.description)
+        res.meme!.img.description = req.body.description;
+
+    if (req.file)
+        res.meme!.img.fileName = req.file.filename;
+
     try {
         const updatedMeme = await res.meme!.save();
         return res.send(updatedMeme);

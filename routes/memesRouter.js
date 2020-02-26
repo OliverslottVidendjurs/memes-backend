@@ -38,9 +38,37 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var express_1 = __importDefault(require("express"));
 var memes_1 = __importDefault(require("../models/memes"));
+var multer_1 = __importStar(require("multer"));
+var v1_1 = __importDefault(require("uuid/v1"));
+var storage = multer_1.diskStorage({
+    destination: function (_req, _file, cb) {
+        cb(null, "images");
+    },
+    filename: function (_req, _file, cb) {
+        cb(null, v1_1.default() + ".jpg");
+    }
+});
+var upload = multer_1.default({
+    storage: storage,
+    fileFilter: function (_req, file, cb) {
+        if (file.mimetype === "image/png" || file.mimetype === "image/jpeg") {
+            cb(null, true);
+        }
+        else {
+            cb(null, false);
+        }
+    }
+});
 var router = express_1.default.Router();
 var getMeme = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
     var meme, error_1;
@@ -81,10 +109,17 @@ router.get("/:id", getMeme, function (_req, res) { return __awaiter(void 0, void
         return [2 /*return*/, res.send(res.meme)];
     });
 }); });
-router.post("/", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+router.post("/", upload.single("image"), function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var newMeme;
     return __generator(this, function (_a) {
-        newMeme = new memes_1.default(req.body);
+        newMeme = new memes_1.default({
+            name: req.body.name,
+            creater: req.body.creater,
+            img: {
+                fileName: req.file.filename,
+                description: req.body.description
+            }
+        });
         newMeme.save(function (err) {
             if (err) {
                 return res.status(400).send({ message: err });
@@ -94,17 +129,19 @@ router.post("/", function (req, res) { return __awaiter(void 0, void 0, void 0, 
         return [2 /*return*/];
     });
 }); });
-router.patch("/:id", getMeme, function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+router.patch("/:id", getMeme, upload.single("image"), function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var updatedMeme, error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                if (req.body.name) {
+                if (req.body.name)
                     res.meme.name = req.body.name;
-                }
-                if (req.body.creater) {
+                if (req.body.creater)
                     res.meme.creater = req.body.creater;
-                }
+                if (req.body.description)
+                    res.meme.img.description = req.body.description;
+                if (req.file)
+                    res.meme.img.fileName = req.file.filename;
                 _a.label = 1;
             case 1:
                 _a.trys.push([1, 3, , 4]);

@@ -17,6 +17,7 @@ db.on("error", function (error) {
 });
 var app = express_1.default();
 app.use(express_1.default.json());
+app.use("/images", express_1.default.static("images"));
 app.use(cors_1.default());
 app.use("/memes", memesRouter_1.default);
 app.listen(5000, function () {
